@@ -1,54 +1,82 @@
 package rest_errors
 
 import (
-	"errors"
+	"fmt"
 	"net/http"
 )
 
-type RestErr struct {
-	Message string        `json:"message"`
-	Status  int           `json:"status"`
-	Error   string        `json:"error"`
-	Causes  []interface{} `json:"causes"`
+type RestErr interface {
+	Message() string
+	Status() int
+	Error() string
+	Causes() []interface{}
 }
 
-func NewError(msg string) error {
-	return errors.New(msg)
+type restErr struct {
+	errMessage string        `json:"message"`
+	errStatus  int           `json:"status"`
+	errError   string        `json:"error"`
+	errCauses  []interface{} `json:"causes"`
 }
 
-func NewBadRequestError(message string) *RestErr {
-	return &RestErr{
-		Message: message,
-		Status:  http.StatusBadRequest,
-		Error:   "bad_request",
+func (e restErr) Error() string {
+	return fmt.Sprintf("errMessage: %s - errStatus: %d - errError: %s - errCauses: [ %v ]", e.errMessage, e.errStatus, e.errError, e.errCauses)
+}
+
+func (e restErr) Message() string {
+	return e.errMessage
+}
+
+func (e restErr) Status() int {
+	return e.errStatus
+}
+
+func (e restErr) Causes() []interface{} {
+	return e.errCauses
+}
+
+func NewRestError(message string, status int, err string, causes []interface{}) restErr {
+	return restErr{
+		errMessage: message,
+		errStatus:  status,
+		errError:   err,
+		errCauses:  causes,
 	}
 }
 
-func NewNotFoundError(message string) *RestErr {
-	return &RestErr{
-		Message: message,
-		Status:  http.StatusNotFound,
-		Error:   "not_found",
+func NewBadRequestError(message string) restErr {
+	return restErr{
+		errMessage: message,
+		errStatus:  http.StatusBadRequest,
+		errError:   "bad_request",
 	}
 }
 
-func NewUnauthorizedError(message string) *RestErr {
-	return &RestErr{
-		Message: message,
-		Status:  http.StatusUnauthorized,
-		Error:   "unauthorized",
+func NewNotFoundError(message string) restErr {
+	return restErr{
+		errMessage: message,
+		errStatus:  http.StatusNotFound,
+		errError:   "not_found",
 	}
 }
 
-func NewInternalServiceError(message string, err error) *RestErr {
-	result := &RestErr{
-		Message: message,
-		Status:  http.StatusInternalServerError,
-		Error:   "internal_server_error",
+func NewUnauthorizedError(message string) restErr {
+	return restErr{
+		errMessage: message,
+		errStatus:  http.StatusUnauthorized,
+		errError:   "unauthorized",
+	}
+}
+
+func NewInternalServiceError(message string, err error) restErr {
+	result := restErr{
+		errMessage: message,
+		errStatus:  http.StatusInternalServerError,
+		errError:   "internal_server_error",
 	}
 
 	if err != nil {
-		result.Causes = append(result.Causes, err.Error())
+		result.errCauses = append(result.errCauses, err.Error())
 	}
 
 	return result
