@@ -14,15 +14,17 @@ const (
 	envLogOutput = "LOG_OUTPUT"
 )
 
-var log logger
+var (
+	log logger
+)
 
-var logger struct {
-	log *zap.Logger
+type bookstoreLogger interface {
+	Print(v ...interface{})
+	Printf(format string, v ...interface{})
 }
 
-type loggerInterface interface {
-	Printf(string, ...interface{})
-	Print(...interface{})
+type logger struct {
+	log *zap.Logger
 }
 
 func init() {
@@ -41,13 +43,12 @@ func init() {
 	}
 
 	var err error
-
 	if log.log, err = logConfig.Build(); err != nil {
 		panic(err)
 	}
 }
 
-func getLevel() zap.AtomicLevel {
+func getLevel() zapcore.Level {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv(envLogLevel))) {
 	case "debug":
 		return zap.DebugLevel
@@ -65,11 +66,10 @@ func getOutput() string {
 	if output == "" {
 		return "stdout"
 	}
-
 	return output
 }
 
-func GetLogger() loggerInterface {
+func GetLogger() bookstoreLogger {
 	return log
 }
 
@@ -77,12 +77,12 @@ func (l logger) Printf(format string, v ...interface{}) {
 	if len(v) == 0 {
 		Info(format)
 	} else {
-		Info(format, v)
+		Info(fmt.Sprintf(format, v...))
 	}
 }
 
 func (l logger) Print(v ...interface{}) {
-	Info(fmt.Sprintf("%+v", v))
+	Info(fmt.Sprintf("%v", v))
 }
 
 func Info(msg string, tags ...zap.Field) {
